@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<!-- Progress, settings, and the leaderboard live in the WebView's own
+	     localStorage. Nothing leaves the device, so nothing is "collected". -->
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<!-- No required-reason APIs: no UserDefaults, no file timestamps, no disk
+	     space checks, no active keyboard or boot-time reads. -->
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array/>
+</dict>
+</plist>

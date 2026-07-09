@@ -1,0 +1,65 @@
+name: ChromaSort
+options:
+  bundleIdPrefix: com.luubao
+  deploymentTarget:
+    iOS: "15.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+settings:
+  base:
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"
+    DEVELOPMENT_TEAM: "$(CHROMASORT_TEAM_ID)"
+    CODE_SIGN_STYLE: Automatic
+    # The pre-build script writes index.html into the source tree; script
+    # sandboxing forbids that.
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+
+targets:
+  ChromaSort:
+    type: application
+    supportedDestinations: [iOS, macCatalyst]
+
+    sources:
+      - path: ChromaSort/Sources
+      - path: ChromaSort/Resources/Assets.xcassets
+      # Folder reference, not a group: contents are resolved at build time, so
+      # the pre-build script can drop index.html in before this is copied.
+      - path: ChromaSort/Resources/www
+        type: folder
+        buildPhase: resources
+      - path: ChromaSort/Resources/PrivacyInfo.xcprivacy
+        buildPhase: resources
+
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.luubao.chromasort
+        PRODUCT_NAME: Chroma Sort
+        INFOPLIST_FILE: ChromaSort/Resources/Info.plist
+        # App Sandbox is a macOS entitlement. Applying it to an iOS build can
+        # fail provisioning, so scope it to the Catalyst (macosx) SDK only.
+        "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": ChromaSort/Resources/ChromaSort.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        TARGETED_DEVICE_FAMILY: "1,2"
+        MACOSX_DEPLOYMENT_TARGET: "12.0"
+        # Keep one bundle id across iOS and Mac so App Store Connect treats
+        # them as a single app record.
+        DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER: NO
+        MARKETING_VERSION: "1.0.0"
+
+    preBuildScripts:
+      - name: Copy index.html into app bundle
+        basedOnDependencyAnalysis: false
+        script: |
+          set -euo pipefail
+          src="$SRCROOT/../index.html"
+          dst="$SRCROOT/ChromaSort/Resources/www/index.html"
+          if [ ! -f "$src" ]; then
+            echo "error: $src not found — the game is the source of truth" >&2
+            exit 1
+          fi
+          mkdir -p "$(dirname "$dst")"
+          cp "$src" "$dst"
