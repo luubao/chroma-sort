@@ -66,7 +66,14 @@
     background-attachment:fixed; min-height:100vh; overflow-x:hidden;
     -webkit-font-smoothing:antialiased; display:flex; flex-direction:column;
   }
-  .wrap{width:100%; max-width:760px; margin:0 auto; padding:16px 16px 26px;
+  /* Packaged as a native app there is no browser to bounce against, and a
+     rubber-banding board or a long-press "Copy" bubble breaks the illusion. */
+  html,body{overscroll-behavior:none}
+  body{-webkit-user-select:none; user-select:none; -webkit-touch-callout:none}
+  .wrap{width:100%; max-width:760px; margin:0 auto;
+        padding:16px 16px 26px;
+        padding:calc(16px + env(safe-area-inset-top,0px)) calc(16px + env(safe-area-inset-right,0px))
+                calc(26px + env(safe-area-inset-bottom,0px)) calc(16px + env(safe-area-inset-left,0px));
         display:flex; flex-direction:column; min-height:100vh; gap:13px}
 
   header{display:flex; align-items:center; justify-content:space-between; gap:12px}
@@ -329,7 +336,13 @@
     complete(){[523,659,784,1047].forEach((f,i)=>tone(f,.22,'triangle',.12,i*.06))},
     win(){[523,659,784,1047,1319,1568].forEach((f,i)=>tone(f,.5,'triangle',.14,i*.09))},
   };
-  const buzz=ms=>{try{navigator.vibrate&&navigator.vibrate(ms)}catch(e){}};
+  // navigator.vibrate is a permanent no-op in Safari and WKWebView, so when the
+  // native shell is hosting us, hand the pattern to the Taptic Engine instead.
+  const native=(typeof webkit!=='undefined'&&webkit.messageHandlers)||null;
+  const buzz=ms=>{try{
+    if(native&&native.haptics) native.haptics.postMessage(ms);
+    else if(navigator.vibrate) navigator.vibrate(ms);
+  }catch(e){}};
 
   // ---------- core rules ----------
   const clone=t=>t.map(x=>x.slice());
@@ -598,6 +611,20 @@
     const next=cur?(cur==='dark'?'light':'dark'):(sysDark?'light':'dark'); document.documentElement.setAttribute('data-theme',next); $('themeBtn').textContent=next==='dark'?'🌙':'☀️'; DB.theme=next; save(); });
   document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>switchMode(t.dataset.m)));
 
+  // ---------- native shell ----------
+  // Mirror the page's theme onto the native chrome (status bar, and the
+  // backdrop showing through the safe-area insets). No-op on the web.
+  function reportTheme(){
+    if(!native||!native.theme)return;
+    const t=document.documentElement.getAttribute('data-theme')
+      ||(window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark');
+    try{native.theme.postMessage(t)}catch(e){}
+  }
+  if(native&&native.theme){
+    new MutationObserver(reportTheme)
+      .observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+  }
+
   // ---------- init ----------
   function init(){
     load();
@@ -610,6 +637,7 @@
     document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.m===S.mode));
     S.level = S.mode==='daily'?1:levels[S.mode];
     loadLevel();
+    reportTheme();
   }
   // persist level progression on every save via wrapper
   const _save=save;
